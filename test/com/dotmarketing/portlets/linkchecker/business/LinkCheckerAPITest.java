@@ -22,8 +22,11 @@ import com.dotmarketing.cache.StructureCache;
 import com.dotmarketing.db.HibernateUtil;
 import com.dotmarketing.factories.MultiTreeFactory;
 import com.dotmarketing.portlets.containers.model.Container;
+import com.dotmarketing.portlets.contentlet.business.web.ContentletWebAPI;
+import com.dotmarketing.portlets.contentlet.business.web.ContentletWebAPIImpl;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.folders.model.Folder;
+import com.dotmarketing.portlets.htmlpageasset.model.HTMLPageAsset;
 import com.dotmarketing.portlets.htmlpages.model.HTMLPage;
 import com.dotmarketing.portlets.linkchecker.bean.InvalidLink;
 import com.dotmarketing.portlets.structure.factories.FieldFactory;
@@ -186,6 +189,7 @@ public class LinkCheckerAPITest extends TestBase {
         Contentlet con=new Contentlet();
         con.setStructureInode(structure.getInode());
         con.setStringProperty("html", sb.toString());
+        con.setHost(host.getIdentifier());
         con=APILocator.getContentletAPI().checkin(con, sysuser, false);
         APILocator.getContentletAPI().isInodeIndexed(con.getInode());
 
@@ -213,28 +217,28 @@ public class LinkCheckerAPITest extends TestBase {
         page1.setTitle("index page");
         page1.setTemplateId(template.getIdentifier());
         page1=APILocator.getHTMLPageAPI().saveHTMLPage(page1, template, Fa, sysuser, false);
-
+        
         HTMLPage page2=new HTMLPage();
         page2.setFriendlyName("something");
         page2.setPageUrl("something."+pageExt);
         page2.setTitle("something");
         page2.setTemplateId(template.getIdentifier());
         page2=APILocator.getHTMLPageAPI().saveHTMLPage(page2, template, Fa, sysuser, false);
-
+        
         HTMLPage page3=new HTMLPage();
         page3.setFriendlyName("index");
         page3.setPageUrl("index."+pageExt);
         page3.setTitle("index page");
         page3.setTemplateId(template.getIdentifier());
         page3=APILocator.getHTMLPageAPI().saveHTMLPage(page3, template, Fab, sysuser, false);
-
+        
         HTMLPage page4=new HTMLPage();
         page4.setFriendlyName("something");
         page4.setPageUrl("something."+pageExt);
         page4.setTitle("something");
         page4.setTemplateId(template.getIdentifier());
         page4=APILocator.getHTMLPageAPI().saveHTMLPage(page4, template, Fab, sysuser, false);
-
+        
         extlinks=new String[] {
             page1.getURI(), page2.getURI(), page3.getURI(), page4.getURI(), // direct hit!
             "/a_test/", "/a_test/b_test", // should be good as it hits index page
@@ -251,6 +255,7 @@ public class LinkCheckerAPITest extends TestBase {
         con=new Contentlet();
         con.setStructureInode(structure.getInode());
         con.setStringProperty("html", sb.toString());
+        con.setHost(host.getIdentifier());
         con=APILocator.getContentletAPI().checkin(con, sysuser, false);
         APILocator.getContentletAPI().isInodeIndexed(con.getInode());
 
@@ -265,6 +270,7 @@ public class LinkCheckerAPITest extends TestBase {
         con=new Contentlet();
         con.setStructureInode(urlmapstructure.getInode());
         con.setStringProperty("a", "url1");
+        con.setHost(host.getIdentifier());
         con=APILocator.getContentletAPI().checkin(con, sysuser, false);
         APILocator.getContentletAPI().isInodeIndexed(con.getInode());
 
@@ -287,6 +293,7 @@ public class LinkCheckerAPITest extends TestBase {
         con=new Contentlet();
         con.setStructureInode(structure.getInode());
         con.setStringProperty("html", sb.toString());
+        con.setHost(host.getIdentifier());
         con=APILocator.getContentletAPI().checkin(con, sysuser, false);
         APILocator.getContentletAPI().isInodeIndexed(con.getInode());
 
@@ -305,6 +312,7 @@ public class LinkCheckerAPITest extends TestBase {
         		              "<a href='"+page4.getURI()+"'>thislink</a>" +
         				      "</body></html>");
         con.setStructureInode(structure.getInode());
+        con.setHost(host.getIdentifier());
         con=APILocator.getContentletAPI().checkin(con, sysuser, false);
         APILocator.getContentletAPI().isInodeIndexed(con.getInode());
         MultiTree mtree=new MultiTree();
@@ -329,6 +337,15 @@ public class LinkCheckerAPITest extends TestBase {
         page5.setTemplateId(template.getIdentifier());
         page5=APILocator.getHTMLPageAPI().saveHTMLPage(page5, template, home, sysuser, false);
 
+        con=new Contentlet();
+        con.setStringProperty("html", "<html><body>" +
+        		              "<a href='"+page2.getURI()+"'>thislink</a>" +
+        		              "<a href='"+page3.getURI()+"'>thislink</a>" +
+        		              "<a href='"+page4.getURI()+"'>thislink</a>" +
+        				      "</body></html>");
+        con.setStructureInode(structure.getInode());
+        con.setHost(host2.getIdentifier());
+        con=APILocator.getContentletAPI().checkin(con, sysuser, false);
         mtree=new MultiTree();
         mtree.setParent1(page5.getIdentifier());
         mtree.setParent2(container.getIdentifier());
