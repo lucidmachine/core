@@ -43,6 +43,7 @@ import com.dotmarketing.portlets.htmlpageasset.model.IHTMLPage;
 import com.dotmarketing.portlets.links.model.Link;
 import com.dotmarketing.portlets.rules.model.Rule;
 import com.dotmarketing.portlets.structure.model.Structure;
+import com.dotmarketing.portlets.templates.design.bean.TemplateLayout;
 import com.dotmarketing.portlets.templates.model.Template;
 import com.dotmarketing.quartz.job.ResetPermissionsJob;
 import com.dotmarketing.util.InodeUtils;
@@ -256,7 +257,7 @@ public class PermissionAjax {
 				}
 				String templateLayoutsPermission = permission.get("templateLayoutsPermission");
 				if(templateLayoutsPermission != null) {
-					newSetOfPermissions.add(new Permission(Template.TEMPLATE_LAYOUTS_CANONICAL_NAME, asset.getPermissionId(), roleId,
+					newSetOfPermissions.add(new Permission(TemplateLayout.class.getCanonicalName(), asset.getPermissionId(), roleId,
 							Integer.parseInt(templateLayoutsPermission), true));
 				}
 				String structurePermission = permission.get("structurePermission");
@@ -358,11 +359,21 @@ public class PermissionAjax {
 			ArrayList assetResult = dc.loadResults();
 			
 			if(assetResult.size()>0){
-				assetType = (String) ((Map)assetResult.get(0)).get("asset_type");
+                // It could be:
+                //
+                // 1. folder
+                // 2. contentlet
+                // 3. htmlpage
+                // 4. template
+                // 5. links
+                // 6. containers: table has different name: dot_containers
+                assetType = (String) ((Map)assetResult.get(0)).get("asset_type");
 			}
 			
 			if(UtilMethods.isSet(assetType)){
-				dc.setSQL("select i.inode, type from inode i,"+assetType+" a where i.inode = a.inode and a.identifier = ?");
+				dc.setSQL("select i.inode, type from inode i," +
+                    Inode.Type.valueOf(assetType.toUpperCase()).getTableName() +
+                    " a where i.inode = a.inode and a.identifier = ?");
 				dc.addParam(assetId);
 				results = dc.loadResults();
 			}

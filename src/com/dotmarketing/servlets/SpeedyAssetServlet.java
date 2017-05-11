@@ -177,15 +177,7 @@ public class SpeedyAssetServlet extends HttpServlet {
 				}
 				
 				//Language is in request, let's load it. Otherwise use the language in session
-				long lang = APILocator.getLanguageAPI().getDefaultLanguage().getId();
-				String request_language = request.getParameter("language_id");
-				if(request_language != null){
-					lang = Long.parseLong(request_language);
-				}else{ 
-					if(session != null){
-						lang = Long.parseLong((String) session.getAttribute(WebKeys.HTMLPAGE_LANGUAGE));//is the language that we have in the session, did not saw a language_id in it
-					}
-				}
+				long lang = WebAPILocator.getLanguageWebAPI().getLanguage(request).getId();
 				
 				if(ident != null && ident.getURI() != null && !ident.getURI().equals("")){
 
@@ -361,10 +353,11 @@ public class SpeedyAssetServlet extends HttpServlet {
         	 * without having to hit cache or db
         	 */
             
+			String referrer = "/contentAsset/raw-data/" + inode + "/fileAsset/?byInode=true";
 
             if (!canRead) {
             	if(user == null){
-            		request.getSession(true).setAttribute(com.dotmarketing.util.WebKeys.REDIRECT_AFTER_LOGIN, request.getRequestURI());//DOTCMS-5682
+            		request.getSession(true).setAttribute(com.dotmarketing.util.WebKeys.REDIRECT_AFTER_LOGIN, referrer);//DOTCMS-5682            		
             		//Sending user to unauthorized the might send him to login
             		response.sendError(401, "The requested file is unauthorized");
             	}else{
@@ -375,7 +368,7 @@ public class SpeedyAssetServlet extends HttpServlet {
             }
             
 
-            request.getRequestDispatcher("/contentAsset/raw-data/" + inode + "/fileAsset/?byInode=true").forward(request, response);
+            request.getRequestDispatcher(referrer).forward(request, response);
 
 
 		} catch (Exception e) {

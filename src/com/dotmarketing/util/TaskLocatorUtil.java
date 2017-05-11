@@ -46,6 +46,7 @@ public class TaskLocatorUtil {
 		ret.add(FixTask00009CheckContentletsInexistentInodes.class);
 		ret.add(FixTask00011RenameHostInFieldVariableName.class);
 		ret.add(FixTask00012UpdateAssetsHosts.class);
+		ret.add(FixTask00015FixAssetTypesInIdentifiers.class);
 		ret.add(FixTask00020DeleteOrphanedIdentifiers.class);
 		ret.add(FixTask00030DeleteOrphanedAssets.class);
 		ret.add(FixTask00040CheckFileAssetsMimeType.class);
@@ -163,9 +164,11 @@ public class TaskLocatorUtil {
 		ret.add(Task03540UpdateTagInodesReferences.class);
 		ret.add(Task03545FixVarcharSizeInFolderOperations.class);
 		ret.add(Task03550RenameContainersTable.class);
-        ret.add(Task03555AddFlagToDeleteUsers.class);
-        ret.add(Task03560ModificationDateColumnAddedToUserTable.class);
-        ret.add(Task03700AddingSystemEventTable.class);
+		ret.add(Task03555AddFlagToDeleteUsers.class);
+		ret.add(Task03560TemplateLayoutCanonicalName.class);
+		ret.add(Task03565FixContainerVersionsCheck.class);
+		ret.add(Task03600UpdateMssqlVarcharTextColumns.class);
+		ret.add(Task03605FixMSSQLMissingConstraints.class);
         return ret;
     }
 

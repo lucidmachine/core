@@ -9,8 +9,8 @@
 <%@ page import="com.liferay.portal.language.LanguageUtil"%>
 <%@ page import="com.dotcms.publisher.environment.business.EnvironmentAPI"%>
 <%@ page import="com.dotcms.publisher.environment.bean.Environment"%>
-<%@ page import="com.dotcms.publisher.endpoint.bean.PublishingEndPoint"%>
 <%@ page import="com.dotcms.enterprise.LicenseUtil" %>
+<%@ page import="com.dotcms.enterprise.publishing.staticpublishing.AWSS3Publisher" %>
 
 <%	if( LicenseUtil.getLevel()<300){ %>
 <%@ include file="/html/portlet/ext/cmsconfig/publishing/not_licensed.jsp" %>
@@ -874,7 +874,7 @@ function deleteEnvPushHistory(envId) {
                 <%= LanguageUtil.get(pageContext, "publisher_Environment_Name") %>
             </th>
             <th nowrap="nowrap" width="100%" >
-                <%= LanguageUtil.get(pageContext, "Servers") %>
+                <%= LanguageUtil.get(pageContext, "publisher_Endpoints") %>
             </th>
             <th nowrap="nowrap">
                 <%= LanguageUtil.get(pageContext, "publisher_Environment_Push_Mode") %>
@@ -915,7 +915,7 @@ function deleteEnvPushHistory(envId) {
                 <div style="padding:10px;border-bottom:1px solid silver;margin-bottom:-1px">
                     <div class="buttonsGroup">
 
-                        <%if(environment.getPushToAll() || i == 0){%>
+                        <%if((environment.getPushToAll() || i == 0) && !"awss3".equalsIgnoreCase(endpoint.getProtocol())){%>
                         <div class="integrityCheckActionsGroup" style="float:right; display:inline-flex;" id="group-<%=endpoint.getId()%>">
                             <button dojoType="dijit.form.Button" onClick="checkIntegrity('<%=endpoint.getId()%>');" id="checkIntegrityButton<%=endpoint.getId()%>" iconClass="dropIcon" style="display: none;">
                                 <%= LanguageUtil.get( pageContext, "CheckIntegrity" ) %>
@@ -950,7 +950,35 @@ function deleteEnvPushHistory(envId) {
                         </div>
                         <div>
                             <%=("https".equals(endpoint.getProtocol())) ? "<span class='encryptIcon'></span>": "<span class='shimIcon'></span>" %>
-                            <i style="color:#888;"><%=endpoint.getProtocol()%>://<%=endpoint.getAddress()%>:<%=endpoint.getPort()%></i>
+                            <%if (!"awss3".equalsIgnoreCase(endpoint.getProtocol())){%>
+                            	<i style="color:#888;"><%=endpoint.getProtocol()%>://<%=endpoint.getAddress()%>:<%=endpoint.getPort()%></i>
+	                        <%} else {
+	                        	String endpointString = "aws-s3";
+								try {
+									java.util.Properties props = new java.util.Properties();
+									props.load(
+										new java.io.StringReader(
+											com.dotmarketing.cms.factories.PublicEncryptionFactory.decryptString(
+												endpoint.getAuthKey().toString()
+											)
+										)
+									);
+
+									String bucketID = props.getProperty(AWSS3Publisher.DOTCMS_PUSH_AWS_S3_BUCKET_ID);
+									if (com.dotmarketing.util.UtilMethods.isSet(bucketID)) {
+
+										endpointString += "://" + bucketID;
+
+										String bucketPrefix = props.getProperty(AWSS3Publisher.DOTCMS_PUSH_AWS_S3_BUCKET_ROOT_PREFIX);
+										if (com.dotmarketing.util.UtilMethods.isSet(bucketPrefix)) {
+
+											endpointString += "/" + bucketPrefix;
+										}
+									}
+								} catch (Exception ex) {}
+	                		%>
+                            	<i style="color:#888;"><%=endpointString%></i>
+	                        <%}%>
                         </div>
                     </div>
                 </div>
@@ -1013,7 +1041,7 @@ function deleteEnvPushHistory(envId) {
     </div>
     <div class="yui-u" style="text-align:right;">
         <button dojoType="dijit.form.Button" onClick="goToAddEndpoint(null, 'true');" iconClass="plusIcon">
-            <%= LanguageUtil.get(pageContext, "publisher_Add_Endpoint") %>
+            <%= LanguageUtil.get(pageContext, "publisher_Add_Server") %>
         </button>
     </div>
 </div>

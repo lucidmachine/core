@@ -17,13 +17,17 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.Calendar;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -31,13 +35,14 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import com.dotcms.repackage.org.apache.commons.beanutils.PropertyUtils;
-
 import com.dotcms.repackage.org.apache.struts.Globals;
 import com.dotmarketing.beans.Inode;
 import com.dotmarketing.db.HibernateUtil;
@@ -127,6 +132,8 @@ public class UtilMethods {
     private static final java.text.SimpleDateFormat DATE_TO_PRETTY_HTML_DATE_2 = new java.text.SimpleDateFormat("MMMM d, yyyy");
     
     private static final java.text.SimpleDateFormat DATE_TO_LUCENE_DATE = new java.text.SimpleDateFormat("yyyyMMdd*");
+    
+    private static final Pattern REGEX_FILENAME_INVALID_CHARS = Pattern.compile("(\\.\\.)|(WEB-INF)|(META-INF)|([\\!\\:\\;\\&\\?\\$\\*\\\"\\/\\[\\]\\=\\|\\,\\#\\{\\}\\\\])");
 
     static {
         _CC_MAPPINGS.put("AMEX", "American Express");
@@ -233,9 +240,13 @@ public class UtilMethods {
     public static final boolean isImage(String x) {
         if (x == null)
             return false;
+        
+        return ImageIO.getImageReadersByFormatName(getFileExtension(x)).hasNext();
+        /*
         return (x.toLowerCase().endsWith(".gif") || x.toLowerCase().endsWith(".jpg") || x.toLowerCase().endsWith(".jpe")
                 || x.toLowerCase().endsWith(".png") || x.toLowerCase().endsWith(".png") || x.toLowerCase().endsWith(".jpeg"))
                 || x.toLowerCase().endsWith(".svg");
+                */
     }
 
     public static final String getMonthFromNow() {
@@ -1211,25 +1222,43 @@ public class UtilMethods {
 
     }
 
-
-
     public static String validateFileName(String fileName) throws IllegalArgumentException{
 
-        if (!isSet(fileName)  ||
-        		fileName.indexOf("..") != -1 || fileName.indexOf("WEB-INF") != -1 || fileName.indexOf("META-INF") != -1 || fileName.indexOf("!") != -1
-                || fileName.indexOf(":") != -1 || fileName.indexOf(";") != -1 || fileName.indexOf(";") != -1 || fileName.indexOf("&") != -1
-                || fileName.indexOf("?") != -1 || fileName.indexOf("$") != -1 || fileName.indexOf("*") != -1 || fileName.indexOf("\"") != -1
-                || fileName.indexOf("/") != -1 || fileName.indexOf("[") != -1 || fileName.indexOf("]") != -1 || fileName.indexOf("=") != -1
-                || fileName.indexOf("|") != -1 || fileName.indexOf(",") != -1 || fileName.indexOf("#") != -1 || fileName.indexOf("{") != -1
-                || fileName.indexOf("}") != -1 || fileName.indexOf("\\") != -1) {
+        if (!isSet(fileName) || REGEX_FILENAME_INVALID_CHARS.matcher(fileName).find()) {
+
             throw new IllegalArgumentException("Invalid Filename passed in: " + fileName);
 
         } else {
             return fileName;
-
         }
 
     }
+
+    public static String getValidFileName(String fileName) throws IllegalArgumentException{
+
+        if (!isSet(fileName)) {
+
+            throw new IllegalArgumentException("Invalid Filename passed in: " + fileName);
+
+        } else {
+            StringBuffer buffer = new StringBuffer();
+
+            Matcher matcher = REGEX_FILENAME_INVALID_CHARS.matcher(fileName);
+            while (matcher.find()) {
+                String match = matcher.group(0);
+
+                Stream<String> targetChars = match.chars().mapToObj(c -> String.format("0x%X", c));
+
+                String replacement = String.join("_", targetChars.toArray(String[]::new));
+
+                matcher.appendReplacement(buffer, replacement);
+            }
+
+            return matcher.appendTail(buffer).toString();
+        }
+
+    }
+    
     public static String getPageChannel(String uri) {
         java.util.StringTokenizer st = new java.util.StringTokenizer(String.valueOf(uri), "/");
         String pageChannel = null;
@@ -3485,20 +3514,16 @@ public class UtilMethods {
         throwable.printStackTrace(pw);
         return sw.getBuffer().toString();
     }
-
+    
+    /**
+     *  {@link  DbConnectionFactory#closeSilently()}
+     */
+    @Deprecated
     public static void closeDbSilently() {
-        try {
-            HibernateUtil.closeSession();
-        } catch (Exception e) {
 
-        } finally {
-            try {
+        
+        DbConnectionFactory.closeSilently();
 
-                DbConnectionFactory.closeConnection();
-            } catch (Exception e) {
-
-            }
-        }
     }
 
     public static boolean isAdminMode(HttpServletRequest request, HttpServletResponse response){

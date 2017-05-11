@@ -34,6 +34,7 @@ import com.dotmarketing.business.LanguageAPITest;
 import com.dotmarketing.business.PermissionAPITest;
 import com.dotmarketing.business.RoleAPITest;
 import com.dotmarketing.business.UserAPITest;
+import com.dotmarketing.business.UserProxyFactoryTest;
 import com.dotmarketing.db.DbConnectionFactoryUtilTest;
 import com.dotmarketing.db.HibernateUtilTest;
 import com.dotmarketing.plugin.PluginMergerTest;
@@ -78,6 +79,7 @@ import com.dotmarketing.tag.business.TagAPITest;
 import com.dotmarketing.util.ImportUtilTest;
 import com.dotmarketing.webdav.WebDavTest;
 import com.liferay.portal.ejb.UserLocalManagerTest;
+import com.liferay.portal.ejb.UserUtilTest;
 
 /**
  * @author Jonathan Gamba.
@@ -174,8 +176,10 @@ import com.liferay.portal.ejb.UserLocalManagerTest;
     VisitorOperatingSystemConditionletFTest.class, //Needs Enterprise License.
     VisitorOperatingSystemConditionletTest.class, //Needs Enterprise License.
     VisitorsCurrentUrlConditionletFTest.class, //Needs Enterprise License.
-    UserAPITest.class,
-    UserLocalManagerTest.class
+    UserAPITest.class, //Needs Enterprise License.
+    UserLocalManagerTest.class,
+    UserUtilTest.class,
+    UserProxyFactoryTest.class
 })
 
 public class AllTestsSuite {}

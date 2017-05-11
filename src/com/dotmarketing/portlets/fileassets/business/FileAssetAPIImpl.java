@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 
 import com.dotcms.repackage.org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import com.dotcms.repackage.org.apache.commons.io.FileUtils;
@@ -28,6 +30,7 @@ import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.menubuilders.RefreshMenus;
 import com.dotmarketing.portlets.contentlet.business.ContentletAPI;
+import com.dotmarketing.portlets.contentlet.business.DotContentletStateException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.folders.business.FolderAPI;
 import com.dotmarketing.portlets.folders.model.Folder;
@@ -235,26 +238,47 @@ public class FileAssetAPIImpl implements FileAssetAPI {
 
 	}
 
-
-
 	public boolean fileNameExists(Host host, Folder folder, String fileName, String identifier) throws  DotDataException{
-		if(!UtilMethods.isSet(fileName)){
+		return this.fileNameExists(host, folder, fileName, identifier, -1);
+	}
+
+	public boolean fileNameExists(Host host, Folder folder, String fileName, String identifier, long languageId) throws  DotDataException{
+		if( !UtilMethods.isSet(fileName) ){
 			return true;
 		}
-		if(folder==null)
-			return false;
 
-		if(host==null)
+		if( folder == null || host == null ) {
 			return false;
+		}
 
-		boolean ret = false;
+		boolean exist = false;
+
 		Identifier folderId = APILocator.getIdentifierAPI().find(folder);
 		String path = folder.getInode().equals(FolderAPI.SYSTEM_FOLDER)?"/"+fileName:folderId.getPath()+fileName;
 		Identifier fileAsset = APILocator.getIdentifierAPI().find(host, path);
+
 		if(fileAsset!=null && InodeUtils.isSet(fileAsset.getId()) && !identifier.equals(fileAsset.getId()) && !fileAsset.getAssetType().equals("folder")){
-			ret = true;
+			// Let's not break old logic. ie calling fileNameExists method without languageId parameter.
+			if (languageId == -1){
+				exist = true;
+			} else { // New logic.
+				//We need to make sure that the contentlets for this identifier have the same language.
+				try {
+					contAPI.findContentletByIdentifier(fileAsset.getId(), false, languageId,
+						APILocator.getUserAPI().getSystemUser(), false);
+					exist = true;
+				} catch (DotSecurityException dse) {
+					// Something could failed, lets log and assume true to not break anything.
+					Logger.error(FileAssetAPIImpl.class,
+						"Error trying to find contentlet from identifier:" + fileAsset.getId(), dse);
+					exist = true;
+				} catch (DotContentletStateException dcse){
+					// DotContentletStateException is thrown when content is not found.
+					exist = false;
+				}
+			}
 		}
-		return ret;
+		return exist;
     }
 
 	public String getRelativeAssetPath(FileAsset fa) {
@@ -506,20 +530,59 @@ public class FileAssetAPIImpl implements FileAssetAPI {
 
     @Override
     public String getContentMetadataAsString(File metadataFile) throws Exception {
+        Logger.debug(this.getClass(), "DEBUG --> Parsing Metadata from file: " + metadataFile.getPath() );
+
+        //Check if Metadata Max Size is set (in Bytes)
+        int metadataLimitInBytes = Config.getIntProperty("META_DATA_MAX_SIZE", 5) * 1024 * 1024;
+
+        //If Max Size limit is greater than what Java allows for Int values
+        if(metadataLimitInBytes > Integer.MAX_VALUE){
+            metadataLimitInBytes = Integer.MAX_VALUE;
+        }
+
+        //Subtracting 1024 Bytes (buffer size)
+        metadataLimitInBytes = metadataLimitInBytes - 1024;
+
         String type=new Tika().detect(metadataFile);
-        
+
         InputStream input=new FileInputStream(metadataFile);
-        
+
         if(type.equals("application/x-gzip")) {
-            // gzip compression were used
+            // gzip compression was used
             input = new GZIPInputStream(input);
         }
         else if(type.equals("application/x-bzip2")) {
-            // bzip2 compression were used
+            // bzip2 compression was used
             input = new BZip2CompressorInputStream(input);
         }
-        
-        return IOUtils.toString(input);
+
+        //Depending on the max limit of the metadata file size, 
+        //we'll get as many bytes as we can so we can parse it
+        //and then they'll be added to the ContentMap
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        byte[] buf = new byte[1024];
+        int bytesRead = 0;
+        int copied = 0;
+
+        while (bytesRead < metadataLimitInBytes && (copied = input.read(buf,0,buf.length)) > -1 ) {
+            baos.write(buf,0,copied);
+            bytesRead = bytesRead + copied;
+            
+        }
+
+        InputStream limitedInput = new ByteArrayInputStream(baos.toByteArray());
+
+        //let's close the original input since it's no longer necessary to keep it open
+        if (input != null) {
+            try {
+                input.close();
+            } catch (IOException e) {
+                 Logger.error(this.getClass(), "There was a problem with parsing a file Metadata: " + e.getMessage(), e);
+            }
+       }
+
+        return IOUtils.toString(limitedInput);
     }
 
     /**
